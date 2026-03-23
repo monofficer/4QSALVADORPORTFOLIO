@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Underwater Sonar Index</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #001f2d; /* blue */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: sans-serif;
+    color: #00ff99;
+  }
+
+  /* TITLE */
+  #header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  #header h1 {
+    margin: 0;
+    font-size: 2rem;
+    letter-spacing: 2px;
+  }
+  #header p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(0,255,153,0.7);
+  }
+
+  /* RADAR */
+  #radar-container {
+    position: relative;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background-color: #000; /* screen */
+    border: 8px solid silver; /* radar frame */
+    box-sizing: border-box;
+  }
+
+  canvas#radar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: block;
+    background-color: transparent;
+  }
+
+  /* PING */
+  .ping {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #00ff99;
+    background-color: #00ff99;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+    opacity: 0;
+  }
+  .ping:hover {
+    transform: scale(1.3);
+    box-shadow: 0 0 15px #0f9;
+  }
+</style>
+</head>
+<body>
+
+<!-- TITLE -->
+<div id="header">
+  <h1>MONOPORTFOLIO - RADAR</h1>
+  <p>(the pings are links! no space for names so guess!)</p>
+</div>
+
+<!-- RADAR -->
+<div id="radar-container">
+  <canvas id="radar"></canvas>
+  
+  <button class="ping" style="top: 40%; left: 60%;" onclick="location.href='/public/quarter4/q41gSectionLN.html'"></button>
+</div>
+
+<script>
+const canvas = document.getElementById('radar');
+const ctx = canvas.getContext('2d');
+canvas.width = canvas.offsetWidth;
+canvas.height = canvas.offsetHeight;
+
+const centerX = canvas.width / 2;
+const centerY = canvas.height / 2;
+const maxRadius = canvas.width / 2;
+
+let angle = 0;
+const sweepTrail = []; // ZA HANDOOOO!
+
+// Ping! Ping! Ping! Ping CHilling!
+const ping = document.querySelector('.ping');
+
+// radar.
+function drawRadar() {
+  // swoosh effect (studying this was painful.)
+  sweepTrail.push(angle);
+  if(sweepTrail.length > 20) sweepTrail.shift(); // keep trail length consistenty
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // M-MAKIMA SAN!
+  ctx.strokeStyle = 'rgba(192,192,192,0.3)'; // le frame
+  ctx.lineWidth = 1;
+  for(let i=1; i<=5; i++){
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, (i*maxRadius)/5, 0, 2*Math.PI);
+    ctx.stroke();
+  }
+
+  // IIIIM CRUCIFIIIIIED CRUCIFIIIIED
+  ctx.beginPath();
+  ctx.moveTo(centerX, 0);
+  ctx.lineTo(centerX, canvas.height);
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(canvas.width, centerY);
+  ctx.stroke();
+
+  // it goes around za warudo like lalalalalala
+  // ZA HANDO!
+  for(let i = 0; i < sweepTrail.length; i++){
+    const alpha = (i+1)/sweepTrail.length * 0.6;
+    ctx.strokeStyle = `rgba(0,255,153,${alpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    const x = centerX + maxRadius * Math.cos(sweepTrail[i]);
+    const y = centerY + maxRadius * Math.sin(sweepTrail[i]);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+
+  // sync ping with le sweep
+  const pingRect = ping.getBoundingClientRect();
+  const containerRect = canvas.getBoundingClientRect();
+  const px = pingRect.left + pingRect.width/2 - containerRect.left - centerX;
+  const py = pingRect.top + pingRect.height/2 - containerRect.top - centerY;
+  const pingAngle = Math.atan2(py, px);
+  // if sweep touches le ping, it go ping!
+  let diff = Math.abs(pingAngle - angle) % (2*Math.PI);
+  if(diff < 0.1 || diff > 2*Math.PI-0.1){
+    ping.style.opacity = 1;
+  } else {
+    ping.style.opacity = 0;
+  }
+
+  angle += 0.02;
+  requestAnimationFrame(drawRadar);
+}
+
+drawRadar();
+</script>
+
+</body>
+</html>

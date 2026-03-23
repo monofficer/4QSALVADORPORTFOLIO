@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movie Review Terminal</title>
+
+<style>
+body {
+  margin: 0;
+  background-color: #001f2d;
+  font-family: sans-serif;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+h1 {
+  color: #00ff99;
+}
+
+/* PANEL */
+.panel {
+  background: black;
+  border: 6px solid silver;
+  border-radius: 15px;
+  padding: 20px;
+  width: 90%;
+  max-width: 700px;
+  margin-bottom: 30px;
+  box-sizing: border-box;
+}
+
+/* INPUTS */
+input, select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 10px 0;
+  padding: 10px;
+  background: black;
+  border: 1px solid #00ff99;
+  color: white;
+  border-radius: 5px;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+input[type="file"] {
+  padding: 6px;
+}
+
+/* BUTTON */
+button {
+  background: #00ff99;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+}
+
+button:hover {
+  box-shadow: 0 0 10px #00ff99;
+}
+
+/* STARS */
+#starRating {
+  font-size: 2rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+#starRating span {
+  color: #00ff99;
+  transition: transform 0.2s;
+}
+
+#starRating span:hover {
+  transform: scale(1.2);
+}
+
+/* MOVIES */
+.movie {
+  position: relative;
+  border: 1px solid silver;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 20px;
+  background: black;
+  overflow: hidden;
+}
+
+/* DELETE BUTTON */
+.delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  color: red;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  text-shadow: 0 0 5px red;
+}
+
+/* IMAGE */
+.movie img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.stars {
+  color: #00ff99;
+  font-weight: bold;
+}
+
+/* ANIMATIONS */
+.spawn {
+  background: #00ff99;
+  height: 0;
+  border-radius: 10px;
+  margin-top: 20px;
+  animation: grow 0.4s ease forwards;
+}
+
+@keyframes grow {
+  from { height: 0; opacity: 0; }
+  to { height: 150px; opacity: 1; }
+}
+
+.fade-out {
+  animation: shrink 0.4s ease forwards;
+}
+
+@keyframes shrink {
+  from { opacity: 1; height: 150px; }
+  to { opacity: 0; height: 0; }
+}
+</style>
+</head>
+
+<body>
+
+<h1>MOVIE REVIEW MODULE</h1>
+
+<div class="panel">
+<form id="movieForm">
+  <input type="text" id="title" placeholder="Movie Name" required>
+
+  <select id="genre">
+    <option>Action</option>
+    <option>Drama</option>
+    <option>Comedy</option>
+    <option>Horror</option>
+    <option>Sci-Fi</option>
+  </select>
+
+  <textarea id="description" placeholder="Description"></textarea>
+
+  <input type="file" id="image">
+
+  <label>Rating</label>
+  <div id="starRating">
+    <span data-value="1">☆</span>
+    <span data-value="2">☆</span>
+    <span data-value="3">☆</span>
+    <span data-value="4">☆</span>
+    <span data-value="5">☆</span>
+  </div>
+
+  <button type="submit">POST ENTRY</button>
+</form>
+</div>
+
+<div id="movies" class="panel"></div>
+
+<script>
+let movies = JSON.parse(localStorage.getItem("movies")) || [];
+let selectedRating = 0;
+let editingIndex = null;
+
+const stars = document.querySelectorAll('#starRating span');
+
+// STAR SYSTEM
+stars.forEach(star => {
+  star.addEventListener('click', () => {
+    selectedRating = Number(star.dataset.value);
+    updateStars();
+  });
+});
+
+function updateStars() {
+  stars.forEach(star => {
+    star.textContent = (Number(star.dataset.value) <= selectedRating) ? '★' : '☆';
+  });
+}
+
+// SAVE
+function saveMovies() {
+  localStorage.setItem("movies", JSON.stringify(movies));
+}
+
+// DISPLAY
+function displayMovies() {
+  const container = document.getElementById("movies");
+  container.innerHTML = "";
+
+  movies.forEach((movie, index) => {
+    const div = createMovieElement(movie, index);
+    container.appendChild(div);
+  });
+}
+
+// CREATE MOVIE 
+function createMovieElement(movie, index) {
+  const div = document.createElement("div");
+  div.className = "movie";
+
+  const avg = Math.ceil(
+    movie.ratings.reduce((a,b)=>a+b,0) / movie.ratings.length
+  );
+
+  div.innerHTML = `
+    <span class="delete-btn" onclick="deleteMovie(${index}, this)">✖</span>
+    <h2>${movie.title}</h2>
+    <p><b>Genre:</b> ${movie.genre}</p>
+    <p>${movie.description}</p>
+    ${movie.image ? `<img src="${movie.image}">` : ""}
+    <p class="stars">Average Signal: ${avg} ★</p>
+    <button onclick="editMovie(${index})">EDIT ENTRY</button>
+  `;
+
+  return div;
+}
+
+// IMAGE
+function getImage(file, callback) {
+  if (!file) return callback(null);
+  const reader = new FileReader();
+  reader.onload = () => callback(reader.result);
+  reader.readAsDataURL(file);
+}
+
+// SUBMIT
+document.getElementById("movieForm").addEventListener("submit", function(e){
+  e.preventDefault();
+
+  if(selectedRating === 0){
+    alert("Select a rating!");
+    return;
+  }
+
+  const title = titleInput.value;
+  const genre = genreInput.value;
+  const description = descriptionInput.value;
+  const rating = selectedRating;
+  const file = imageInput.files[0];
+
+  getImage(file, (imageData) => {
+
+    if(editingIndex !== null){
+      movies[editingIndex].ratings.push(rating);
+      editingIndex = null;
+    } else {
+      const existing = movies.find(m => m.title === title);
+
+      if(existing){
+        existing.ratings.push(rating);
+      } else {
+        movies.push({
+          title, genre, description,
+          image: imageData,
+          ratings: [rating]
+        });
+      }
+    }
+
+    saveMovies();
+
+    // SPAWN
+    const container = document.getElementById("movies");
+    const temp = document.createElement("div");
+    temp.className = "spawn";
+    container.appendChild(temp);
+
+    setTimeout(() => {
+      container.removeChild(temp);
+      displayMovies();
+    }, 400);
+
+    movieForm.reset();
+    selectedRating = 0;
+    updateStars();
+  });
+});
+
+// EDIT
+function editMovie(index){
+  const m = movies[index];
+  titleInput.value = m.title;
+  genreInput.value = m.genre;
+  descriptionInput.value = m.description;
+  editingIndex = index;
+}
+
+// DELETE
+function deleteMovie(index, el){
+  const card = el.parentElement;
+  card.classList.add("fade-out");
+
+  setTimeout(() => {
+    movies.splice(index, 1);
+    saveMovies();
+    displayMovies();
+  }, 400);
+}
+
+// INIT
+const titleInput = document.getElementById("title");
+const genreInput = document.getElementById("genre");
+const descriptionInput = document.getElementById("description");
+const imageInput = document.getElementById("image");
+const movieForm = document.getElementById("movieForm");
+
+displayMovies();
+</script>
+
+</body>
+</html>
